@@ -1,0 +1,112 @@
+#ifndef _NXSTL_MUTEX
+#define _NXSTL_MUTEX 1
+#ifdef __SWITCH__
+extern "C" {
+#include <switch/kernel/mutex.h>
+}
+
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+
+// Common base class for std::mutex
+class __mutex_base
+{
+protected:
+    typedef Mutex			__native_type;
+
+    __native_type  _M_mutex = {};
+
+    constexpr __mutex_base() noexcept = default;
+
+    __mutex_base(const __mutex_base&) = delete;
+    __mutex_base& operator=(const __mutex_base&) = delete;
+};
+
+/// The standard mutex type.
+class mutex : private __mutex_base
+{
+public:
+    typedef __native_type* 			native_handle_type;
+
+    constexpr mutex() noexcept = default;
+    ~mutex() = default;
+
+    mutex(const mutex&) = delete;
+    mutex& operator=(const mutex&) = delete;
+
+    void
+    lock()
+    {
+        mutexLock(&_M_mutex);
+    }
+
+    bool
+    try_lock() noexcept
+    {
+        return mutexTryLock(&_M_mutex);
+    }
+
+    void
+    unlock()
+    {
+        mutexUnlock(&_M_mutex);
+    }
+
+    native_handle_type
+    native_handle() noexcept
+    { return &_M_mutex; }
+};
+
+// Common base class for std::recursive_mutex
+class __recursive_mutex_base
+{
+protected:
+    typedef RMutex		__native_type;
+
+    __recursive_mutex_base(const __recursive_mutex_base&) = delete;
+    __recursive_mutex_base& operator=(const __recursive_mutex_base&) = delete;
+
+    __native_type  _M_mutex = {};
+
+    __recursive_mutex_base() = default;
+};
+
+/// The standard recursive mutex type.
+class recursive_mutex : private __recursive_mutex_base
+{
+public:
+    typedef __native_type* 			native_handle_type;
+
+    constexpr recursive_mutex() = default;
+    ~recursive_mutex() = default;
+
+    recursive_mutex(const recursive_mutex&) = delete;
+    recursive_mutex& operator=(const recursive_mutex&) = delete;
+
+    void
+    lock()
+    {
+        rmutexLock(&_M_mutex);
+    }
+
+    bool
+    try_lock() noexcept
+    {
+        return rmutexTryLock(&_M_mutex);
+    }
+
+    void
+    unlock()
+    {
+        rmutexUnlock(&_M_mutex);
+    }
+
+    native_handle_type
+    native_handle() noexcept
+    { return &_M_mutex; }
+};
+
+}
+
+#endif
+#endif

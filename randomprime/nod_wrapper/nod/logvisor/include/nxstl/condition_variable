@@ -1,0 +1,155 @@
+#ifndef _NXSTL_CONDVAR
+#define _NXSTL_CONDVAR 1
+#ifdef __SWITCH__
+extern "C" {
+#include <switch/kernel/condvar.h>
+#include <switch/result.h>
+}
+
+#include <chrono>
+#include <bits/std_mutex.h>
+#include <ext/concurrence.h>
+#include <bits/alloc_traits.h>
+#include <bits/allocator.h>
+#include <bits/unique_ptr.h>
+#include <bits/shared_ptr.h>
+#include <bits/cxxabi_forced.h>
+
+namespace std _GLIBCXX_VISIBILITY(default)
+{
+
+/// cv_status
+enum class cv_status { no_timeout, timeout };
+
+/// condition_variable
+class condition_variable
+{
+    typedef chrono::system_clock	__clock_t;
+    typedef CondVar		            __native_type;
+
+    __native_type			        _M_cond = {};
+public:
+    typedef __native_type* 		native_handle_type;
+
+    constexpr condition_variable() noexcept = default;
+    ~condition_variable() noexcept = default;
+
+    condition_variable(const condition_variable&) = delete;
+    condition_variable& operator=(const condition_variable&) = delete;
+
+    void
+    notify_one() noexcept
+    {
+        condvarWakeOne(&_M_cond);
+    }
+
+    void
+    notify_all() noexcept
+    {
+        condvarWakeAll(&_M_cond);
+    }
+
+    void
+    wait(unique_lock<mutex>& __lock) noexcept
+    {
+        condvarWait(&_M_cond, __lock.mutex()->native_handle());
+    }
+
+    template<typename _Predicate>
+    void
+    wait(unique_lock<mutex>& __lock, _Predicate __p)
+    {
+        while (!__p())
+            wait(__lock);
+    }
+
+    template<typename _Duration>
+    cv_status
+    wait_until(unique_lock<mutex>& __lock,
+               const chrono::time_point<__clock_t, _Duration>& __atime)
+    { return __wait_until_impl(__lock, __atime); }
+
+    template<typename _Clock, typename _Duration>
+    cv_status
+    wait_until(unique_lock<mutex>& __lock,
+               const chrono::time_point<_Clock, _Duration>& __atime)
+    {
+        // DR 887 - Sync unknown clock to known clock.
+        const typename _Clock::time_point __c_entry = _Clock::now();
+        const __clock_t::time_point __s_entry = __clock_t::now();
+        const auto __delta = __atime - __c_entry;
+        const auto __s_atime = __s_entry + __delta;
+
+        return __wait_until_impl(__lock, __s_atime);
+    }
+
+    template<typename _Clock, typename _Duration, typename _Predicate>
+    bool
+    wait_until(unique_lock<mutex>& __lock,
+               const chrono::time_point<_Clock, _Duration>& __atime,
+               _Predicate __p)
+    {
+        while (!__p())
+            if (wait_until(__lock, __atime) == cv_status::timeout)
+                return __p();
+        return true;
+    }
+
+    template<typename _Rep, typename _Period>
+    cv_status
+    wait_for(unique_lock<mutex>& __lock,
+             const chrono::duration<_Rep, _Period>& __rtime)
+    {
+        using __dur = typename __clock_t::duration;
+        auto __reltime = chrono::duration_cast<__dur>(__rtime);
+        if (__reltime < __rtime)
+            ++__reltime;
+        return wait_until(__lock, __clock_t::now() + __reltime);
+    }
+
+    template<typename _Rep, typename _Period, typename _Predicate>
+    bool
+    wait_for(unique_lock<mutex>& __lock,
+             const chrono::duration<_Rep, _Period>& __rtime,
+             _Predicate __p)
+    {
+        using __dur = typename __clock_t::duration;
+        auto __reltime = chrono::duration_cast<__dur>(__rtime);
+        if (__reltime < __rtime)
+            ++__reltime;
+        return wait_until(__lock, __clock_t::now() + __reltime, std::move(__p));
+    }
+
+    native_handle_type
+    native_handle()
+    { return &_M_cond; }
+
+private:
+    template<typename _Dur>
+    cv_status
+    __wait_until_impl(unique_lock<mutex>& __lock,
+                      const chrono::time_point<__clock_t, _Dur>& __atime)
+    {
+        auto __ns = chrono::duration_cast<chrono::nanoseconds>(__atime);
+
+        Result res = condvarWaitTimeout(&_M_cond, __lock.mutex()->native_handle(), __ns.count());
+
+        if (R_DESCRIPTION(res) == KernelError_Timeout)
+            return cv_status::timeout;
+        return cv_status::no_timeout;
+    }
+};
+
+void
+notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
+
+struct __at_thread_exit_elt
+{
+    __at_thread_exit_elt* _M_next;
+    void (*_M_cb)(void*);
+};
+
+}
+
+#endif
+#endif

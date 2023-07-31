@@ -1,0 +1,16 @@
+[package]
+name = "primeapi_macros"
+version = "0.1.0"
+authors = ["April Wade <wayedt@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+syn = { version = "1", features = ["full"] }
+quote = "1"
+md5 = "0.6"
+proc-macro2 = "1"
+
+[lib]
+proc-macro = true

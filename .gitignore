@@ -10,3 +10,8 @@
 /dolphin-user
 .DS_Store
 target/
+
+*.o
+*.a
+build/*
+script/__pycache__/*

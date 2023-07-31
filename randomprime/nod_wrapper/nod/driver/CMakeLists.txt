@@ -1,0 +1,11 @@
+add_executable(nodtool main.cpp)
+
+target_link_libraries(nodtool nod logvisor)
+if (NOT WIN32)
+    target_link_libraries(nodtool pthread)
+    if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+        target_link_libraries(nodtool execinfo)
+    else()
+        target_link_libraries(nodtool dl)
+    endif()
+endif()
