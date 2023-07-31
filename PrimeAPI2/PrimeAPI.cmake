@@ -11,7 +11,7 @@ set(DEVKITPPC "/opt/devkitpro/devkitPPC")
 
 set(DEVKIT_PATHS
     "${DEVKITPRO}/libogc/include"
-    "${DEVKITPPC}/lib/gcc/powerpc-eabi/10.2.0/include"
+    "${DEVKITPPC}/lib/gcc/powerpc-eabi/13.1.0/include"
     "${DEVKITPPC}/powerpc-eabi/include"
 )
 
